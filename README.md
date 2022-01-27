@@ -41,7 +41,9 @@ job submission with
 
 The python file will be called with:
 
-    python file.py --argname1 value1 --argname2 value2 ...
+```bash
+python file.py --argname1 value1 --argname2 value2 ...
+```
 
 See [Example Python Files](/examples/python_files)
 
@@ -54,7 +56,10 @@ job submission with
 
 The function will be called with the parameters as keyword arguments:
 
-    main(argname1=value1, argname2=value2, ...)
+```python
+from file import main
+main(argname1=value1, argname2=value2, ...)
+```
 
 See [Example Python Functions](/examples/python_functions)
 
