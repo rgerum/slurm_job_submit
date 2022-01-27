@@ -4,6 +4,9 @@ import subprocess
 import importlib
 from pathlib import Path
 import csv
+import argparse
+import time
+import signal
 
 # default job script that gets created if no job script is present
 run_job = """
@@ -11,6 +14,7 @@ run_job = """
 #SBATCH --time=24:00:00
 #SBATCH --gres=gpu:1
 #SBATCH --mem-per-cpu=64000M
+#SBATCH --signal=B:TERM@00:05
 
 # store start time
 start=`date +%s.%N`
@@ -66,8 +70,20 @@ def read_csv(filename, row_index=None):
 
 def submit():
     length = 0
+    if len(sys.argv) >= 1 and sys.argv[1] == "init":
+        with open("run_job.sh", "w") as fp:
+            fp.write(run_job)
+        print("File run_job.sh created.")
+        exit()
+    if len(sys.argv) >= 1 and sys.argv[1] == "status":
+        os.system("cat slurm-list.csv")
+        exit()
+    if len(sys.argv) >= 1 and sys.argv[1] == "start":
+        sys.argv.pop(1)
+        start()
+        exit()
     # if the first argument is a python file or a python function
-    if len(sys.argv) >= 2 and (sys.argv[1].endswith(".py") or ".py:" in sys.argv[1]):
+    elif len(sys.argv) >= 2 and (sys.argv[1].endswith(".py") or ".py:" in sys.argv[1]):
         # then the second argument should be a csv file
         try:
             data = read_csv(sys.argv[2])
@@ -78,7 +94,7 @@ def submit():
         if length == 0:
             print(f"File {sys.argv[2]} does not contain jobs.")
             exit()
-        command = f"pysubmit_start \"{sys.argv[1]}\" \"{sys.argv[2]}\" $SLURM_ARRAY_TASK_ID"
+        command = f"pysubmit_start \"{sys.argv[1]}\" \"{sys.argv[2]}\" $SLURM_ARRAY_TASK_ID --slurm_id $SLURM_ARRAY_JOB_ID"
         print(f"Found {length} jobs in {sys.argv[2]}")
     elif len(sys.argv) >= 2:
         # then the second argument should be a file we load with pandas
@@ -95,7 +111,7 @@ def submit():
         if length == 0:
             print(f"File {sys.argv[1]} does not contain jobs.")
             exit()
-        command = f"pysubmit_start \"{sys.argv[1]}\" $SLURM_ARRAY_TASK_ID"
+        command = f"pysubmit_start \"{sys.argv[1]}\" $SLURM_ARRAY_TASK_ID --slurm_id $SLURM_ARRAY_JOB_ID"
         print(f"Found {length} jobs in {sys.argv[1]}")
     else:
         print("To submit a list of commands call")
@@ -134,38 +150,94 @@ def submit():
     os.system("sbatch job.sh")
 
 
+def set_job_status(slurm_id, status):
+    while True:
+        try:
+            with open(f"slurm-lock", "w") as fp0:
+                if Path("slurm-list.csv").exists():
+                    with open(f"slurm-list.csv", "r") as fp:
+                        data = list(csv.reader(fp))
+                else:
+                    data = []
+
+                if len(data) == 0:
+                    data.append(["id", "start_time", "end_time", "status", "status_text"])
+
+                index = 0
+                for index in range(len(data)):
+                    if len(data[index]) and data[index][0] == slurm_id:
+                        break
+                else:
+                    data.append([])
+                    index = len(data)-1
+                data[index] = [slurm_id]+status
+                with open(f"slurm-list.csv", "w") as fp:
+                    for row in data:
+                        fp.write(",".join([str(r) for r in row])+"\n")
+            break
+        except IOError as err:
+            print(err, "waiting for slurm-lock")
+            time.sleep(0.001)
+
 def start():
-    # if the first argument is a python file or a python function
+    parser = argparse.ArgumentParser(description='Call a python script of function.')
     if sys.argv[1].endswith(".py") or ".py:" in sys.argv[1]:
-        # then the second argument should be a csv file we load with pandas
-        data = read_csv(sys.argv[2], int(sys.argv[3]))
-        if 0:
-            # remove an index column if present
-            if "Unnamed: 0" == data.columns[0]:
-                data = data.drop(columns=data.columns[0])
-            # get the row specified by the third argument
-            data = data.iloc[int(sys.argv[3])]
-        # is it a python function?
-        if ":" in sys.argv[1]:
-            # split the command in file and function
-            filename, function = sys.argv[1].split(":")
-            # import the file
-            sys.path.append(str(Path(filename).parent))
-            module = importlib.import_module(Path(filename).stem)
-            # and call the function
-            getattr(module, function)(**data)
-        # if it is a python file
+        parser.add_argument('script', type=str, help='the script to call')
+    parser.add_argument('datafile', type=str, help='the csv file from which to take the data')
+    parser.add_argument('index', type=int, help='the csv file from which to take the data')
+    parser.add_argument('--slurm_id', type=str, default=None, help='the id of the slurm process')
+
+    args = parser.parse_args()
+    print(args)
+
+    # Definition of the signal handler. All it does is flip the 'interrupted' variable
+    def signal_handler(signum, frame):
+        if args.slurm_id is not None:
+            set_job_status(args.slurm_id, [start_time, time.time(), -1, "cancel"])
+
+    # Register the signal handler
+    signal.signal(signal.SIGTERM, signal_handler)
+
+    if args.slurm_id is not None:
+        start_time = time.time()
+        set_job_status(args.slurm_id, [start_time, -1, -1, "running"])
+
+    try:
+        # if the first argument is a python file or a python function
+        if getattr(args, "script", None) is not None:
+
+            # then the second argument should be a csv file we load with pandas
+            data = read_csv(args.datafile, args.index)
+
+            # is it a python function?
+            if ":" in args.script:
+                # split the command in file and function
+                filename, function = args.script.split(":")
+                # import the file
+                sys.path.append(str(Path(filename).parent))
+                module = importlib.import_module(Path(filename).stem)
+                # and call the function
+                getattr(module, function)(**data)
+            # if it is a python file
+            else:
+                # assemble the commands to call the file
+                commands = ["python", args.script]
+                for key, value in data.items():
+                    commands.append(f"--{key}")
+                    commands.append(f"{value}")
+                # and call it
+                subprocess.check_call(commands, shell=False)
         else:
-            # assemble the commands to call the file
-            commands = ["python", sys.argv[1]]
-            for key, value in data.items():
-                commands.append(f"--{key}")
-                commands.append(f"{value}")
-            # and call it
-            subprocess.Popen(commands)
-    else:
-        # if not the file should directly contain commands
-        with open(sys.argv[1]) as fp:
-            command = fp.readlines()[int(sys.argv[2])]
-        print(command)
-        os.system(command)
+            # if not the file should directly contain commands
+            with open(args.datafile) as fp:
+                command = fp.readlines()[args.index]
+            print(command)
+            subprocess.check_call(command, shell=True)
+            #os.system(command)
+    except subprocess.CalledProcessError as err:
+        if args.slurm_id is not None:
+            set_job_status(args.slurm_id, [start_time, time.time(), 0, "error"])
+        raise
+
+    if args.slurm_id is not None:
+        set_job_status(args.slurm_id, [start_time, time.time(), 0, "done"])
