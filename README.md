@@ -8,6 +8,18 @@ You can install it directly from github using pip:
 	pip install git+https://github.com/rgerum/slurm_job_submitter
 
 ## Usage
+First, you need a "run_job.sh" script that defines the SLURM parameters and the commands to run.
+You can call 
+
+    pysubmit init
+
+to get an example job script. It needs to contain the variable $COMMAND which
+will later be replaced by the actual command to run.
+
+If you use the example job script you need to define which account to use. So change the line
+with "#SBATCH --account=YOUR_ACCOUNT". If you try to run a command without a run_job.sh script the default script is
+also created.
+
 The slurm job submitter has different modes of operation.
 
 ### Arbitrary commands
@@ -17,6 +29,8 @@ job submission with
     pysubmit jobs.dat
 
 It will then start each line of the "jobs.dat" file as a command.
+
+See [Example Commands](/tree/main/examples/commands)
 
 ### Python files
 Define a csv file defining all the parameter that you want to call, e.g. "jobs.csv", 
@@ -29,6 +43,8 @@ The python file will be called with:
 
     python file.py --argname1 value1 --argname2 value2 ...
 
+See [Example Python Files](/tree/main/examples/python_files)
+
 ### Python functions
 Define a csv file defining all the parameter that you want to call, e.g. "jobs.csv", 
 with which you want to start the python function, e.g. "main", from a python file, e.g. "file.py". You can start the 
@@ -40,3 +56,13 @@ The function will be called with the parameters as keyword arguments:
 
     main(argname1=value1, argname2=value2, ...)
 
+See [Example Python Functions](/tree/main/examples/python_functions)
+
+## Status
+To print the current status of the processes call
+
+    pysubmit status
+
+The status is stored in the file "slurm-list.csv".
+## Resubmit
+TODO

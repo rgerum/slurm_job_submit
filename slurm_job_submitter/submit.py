@@ -146,7 +146,7 @@ def submit():
     except FileNotFoundError:
         with open("run_job.sh", "w") as fp:
             fp.write(run_job)
-        print("ERROR: define job script run_job.sh. I just created a template run_job.sh")
+        print("ERROR: You need to define job script run_job.sh.\nI just created a template run_job.sh.\nPlease edit it and change the line with #SBATCH --account=YOUR_ACCOUNT to your account name.")
         return
 
     if "#SBATCH --account=YOUR_ACCOUNT" in file_content:
@@ -165,7 +165,11 @@ def submit():
     with open("job.sh", "w") as fp:
         fp.write(file_content)
 
-    submit = subprocess.check_output(["sbatch", "job.sh"])
+    try:
+        submit = subprocess.check_output(["sbatch", "job.sh"])
+    except subprocess.CalledProcessError:
+        # omit the python error here as sbatch already should have printed an error message
+        return
 
     batch_id = int(submit.split()[-1])
     print("batch_id", batch_id)
