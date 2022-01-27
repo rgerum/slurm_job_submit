@@ -160,12 +160,12 @@ def submit():
 
 """+file_content
 
-    print(file_content)
+    #print(file_content)
 
     with open("job.sh", "w") as fp:
         fp.write(file_content)
 
-    submit = "submited 12345"#subprocess.check_output(["sbatch", "job.sh"])
+    submit = subprocess.check_output(["sbatch", "job.sh"])
 
     batch_id = int(submit.split()[-1])
     print("batch_id", batch_id)
