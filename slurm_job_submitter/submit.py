@@ -55,18 +55,44 @@ def read_csv(filename, row_index=None):
 def submit():
     length = 0
     # if the first argument is a python file or a python function
-    if sys.argv[1].endswith(".py") or ".py:" in sys.argv[1]:
+    if len(sys.argv) >= 2 and (sys.argv[1].endswith(".py") or ".py:" in sys.argv[1]):
         # then the second argument should be a csv file
-        data = read_csv(sys.argv[2])
+        try:
+            data = read_csv(sys.argv[2])
+        except:
+            print(f"File {sys.argv[2]} is not a valid csv file.")
+            exit()
         length = len(data)
+        if length == 0:
+            print(f"File {sys.argv[2]} does not contain jobs.")
+            exit()
         command = f"pysubmit_start \"{sys.argv[1]}\" \"{sys.argv[2]}\" $SLURM_ARRAY_TASK_ID"
         print(f"Found {length} jobs in {sys.argv[2]}")
-    else:
+    elif len(sys.argv) >= 2:
         # then the second argument should be a file we load with pandas
-        with open(sys.argv[1], "r") as fp:
-            length = len(fp.readlines())
+        if sys.argv[1].endswith(".csv"):
+            print("To submit csv files you need to provide a python script file:")
+            print("     pysubmit run.py jobs.csv")
+            exit()
+        try:
+            with open(sys.argv[1], "r") as fp:
+                length = len(fp.readlines())
+        except:
+            print(f"File {sys.argv[1]} is not a valid file.")
+            exit()
+        if length == 0:
+            print(f"File {sys.argv[1]} does not contain jobs.")
+            exit()
         command = f"pysubmit_start \"{sys.argv[1]}\" $SLURM_ARRAY_TASK_ID"
         print(f"Found {length} jobs in {sys.argv[1]}")
+    else:
+        print("To submit a list of commands call")
+        print("     pysubmit jobs.dat")
+        print("To submit a list of python script calls")
+        print("     pysubmit run.py jobs.csv")
+        print("To submit a list of python function calls")
+        print("     pysubmit run.py:main jobs.csv")
+        exit()
 
     try:
         with open("run_job.sh", "r") as fp:
