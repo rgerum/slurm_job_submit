@@ -147,10 +147,19 @@ def submit():
     with open("job.sh", "w") as fp:
         fp.write(file_content)
 
-    os.system("sbatch job.sh")
+    submit = subprocess.check_output("sbatch job.sh")
+
+    try:
+        batch_id = int(submit.split()[-1])
+        print("batch_id", batch_id)
+        for i in range(length):
+            set_job_status(batch_id, i, [start_time, time.time(), -1, "submitted"])
+    except ValueError as err:
+        raise err
 
 
-def set_job_status(slurm_id, status):
+def set_job_status(slurm_id, index, status):
+    id = f"{slurm_id}_{index}"
     while True:
         try:
             with open(f"slurm-lock", "w") as fp0:
@@ -165,12 +174,12 @@ def set_job_status(slurm_id, status):
 
                 index = 0
                 for index in range(len(data)):
-                    if len(data[index]) and data[index][0] == slurm_id:
+                    if len(data[index]) and data[index][0] == id:
                         break
                 else:
                     data.append([])
                     index = len(data)-1
-                data[index] = [slurm_id]+status
+                data[index] = [id]+status
                 with open(f"slurm-list.csv", "w") as fp:
                     for row in data:
                         fp.write(",".join([str(r) for r in row])+"\n")
@@ -193,14 +202,14 @@ def start():
     # Definition of the signal handler. All it does is flip the 'interrupted' variable
     def signal_handler(signum, frame):
         if args.slurm_id is not None:
-            set_job_status(args.slurm_id, [start_time, time.time(), -1, "cancel"])
+            set_job_status(args.slurm_id, args.index, [start_time, time.time(), -1, "cancel"])
 
     # Register the signal handler
     signal.signal(signal.SIGTERM, signal_handler)
 
     if args.slurm_id is not None:
         start_time = time.time()
-        set_job_status(args.slurm_id, [start_time, -1, -1, "running"])
+        set_job_status(args.slurm_id, args.index, [start_time, -1, -1, "running"])
 
     try:
         # if the first argument is a python file or a python function
@@ -236,8 +245,8 @@ def start():
             #os.system(command)
     except subprocess.CalledProcessError as err:
         if args.slurm_id is not None:
-            set_job_status(args.slurm_id, [start_time, time.time(), 0, "error"])
+            set_job_status(args.slurm_id, args.index, [start_time, time.time(), 0, "error"])
         raise
 
     if args.slurm_id is not None:
-        set_job_status(args.slurm_id, [start_time, time.time(), 0, "done"])
+        set_job_status(args.slurm_id, args.index, [start_time, time.time(), 0, "done"])
