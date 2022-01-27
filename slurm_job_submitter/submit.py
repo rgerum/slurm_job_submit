@@ -15,7 +15,6 @@ run_job = """
 #SBATCH --time=24:00:00
 #SBATCH --gres=gpu:1
 #SBATCH --mem-per-cpu=64000M
-#SBATCH --signal=B:TERM@00:05
 
 # store start time
 start=`date +%s.%N`
