@@ -77,7 +77,10 @@ def submit():
         print("File run_job.sh created.")
         exit()
     if len(sys.argv) >= 1 and sys.argv[1] == "status":
-        os.system("cat slurm-list.csv | column -t -s,")
+        if Path("slurm-list.csv").exists():
+            os.system("cat slurm-list.csv | column -t -s,")
+        else:
+            print("No jobs submitted yet.")
         exit()
     if len(sys.argv) >= 1 and sys.argv[1] == "start":
         sys.argv.pop(1)
@@ -95,6 +98,19 @@ def submit():
         if length == 0:
             print(f"File {sys.argv[2]} does not contain jobs.")
             exit()
+
+        commands = []
+        for i in range(length):
+            data = read_csv(sys.argv[2], i)
+            if ":" in sys.argv[1]:
+                commands.append(sys.argv[1]+"("+" ".join([f"{key}={value}" for key, value in data.items()])+")")
+            else:
+                # assemble the commands to call the file
+                cmd = [sys.argv[1]]
+                for key, value in data.items():
+                    cmd.append(f"--{key}")
+                    cmd.append(f"{value}")
+                commands.append(" ".join(cmd))
         command = f"pysubmit_start \"{sys.argv[1]}\" \"{sys.argv[2]}\" $SLURM_ARRAY_TASK_ID --slurm_id $SLURM_ARRAY_JOB_ID"
         print(f"Found {length} jobs in {sys.argv[2]}")
     elif len(sys.argv) >= 2:
@@ -112,6 +128,8 @@ def submit():
         if length == 0:
             print(f"File {sys.argv[1]} does not contain jobs.")
             exit()
+        with open(sys.argv[1]) as fp:
+            commands = fp.readlines()
         command = f"pysubmit_start \"{sys.argv[1]}\" $SLURM_ARRAY_TASK_ID --slurm_id $SLURM_ARRAY_JOB_ID"
         print(f"Found {length} jobs in {sys.argv[1]}")
     else:
@@ -148,12 +166,12 @@ def submit():
     with open("job.sh", "w") as fp:
         fp.write(file_content)
 
-    submit = subprocess.check_output(["sbatch", "job.sh"])
+    submit = "submited 12345"#subprocess.check_output(["sbatch", "job.sh"])
 
     batch_id = int(submit.split()[-1])
     print("batch_id", batch_id)
     for i in range(length):
-        set_job_status(batch_id, i, [-1, -1, -1, -1, "submitted"])
+        set_job_status(batch_id, i, dict(status_text="submitted", command=commands[i]))
 
 
 def set_job_status(slurm_id, index, status):
@@ -167,17 +185,22 @@ def set_job_status(slurm_id, index, status):
                 else:
                     data = []
 
+                keys = ["id", "start_time", "end_time", "duration", "status", "status_text", "command"]
+                default = dict(id=id, start_time=-1, end_time=-1, duration=-1, status=-1, status_text="none", command="n/a")
+
                 if len(data) == 0:
-                    data.append(["id", "start_time", "end_time", "duration", "status", "status_text"])
+                    data.append(keys)
 
                 index = 0
                 for index in range(len(data)):
                     if len(data[index]) and data[index][0] == id:
+                        default.update({key: value for key, value in zip(keys, data[index])})
                         break
                 else:
                     data.append([])
                     index = len(data)-1
-                data[index] = [id]+status
+                default.update(status)
+                data[index] = [default[key] for key in keys]
                 with open(f"slurm-list.csv", "w") as fp:
                     for row in data:
                         fp.write(",".join([str(r) for r in row])+"\n")
@@ -200,14 +223,14 @@ def start():
     # Definition of the signal handler. All it does is flip the 'interrupted' variable
     def signal_handler(signum, frame):
         if args.slurm_id is not None:
-            set_job_status(args.slurm_id, args.index, [start_time, datetime.datetime.now(), datetime.datetime.now()-start_time, -1, "cancel"])
+            set_job_status(args.slurm_id, args.index, dict(end_time=datetime.datetime.now(), duration=datetime.datetime.now()-start_time, status_text="cancel"))
 
     # Register the signal handler
     signal.signal(signal.SIGTERM, signal_handler)
 
     if args.slurm_id is not None:
         start_time = datetime.datetime.now()
-        set_job_status(args.slurm_id, args.index, [start_time, -1, -1, -1, "running"])
+        set_job_status(args.slurm_id, args.index, dict(start_time=start_time, status_text="running"))
 
     try:
         # if the first argument is a python file or a python function
@@ -243,8 +266,8 @@ def start():
             #os.system(command)
     except subprocess.CalledProcessError as err:
         if args.slurm_id is not None:
-            set_job_status(args.slurm_id, args.index, [start_time, datetime.datetime.now(), datetime.datetime.now()-start_time, -1, "error"])
+            set_job_status(args.slurm_id, args.index, dict(end_time=datetime.datetime.now(), duration=datetime.datetime.now()-start_time, status_text="error"))
         raise
 
     if args.slurm_id is not None:
-        set_job_status(args.slurm_id, args.index, [start_time, datetime.datetime.now(), datetime.datetime.now()-start_time, 0, "done"])
+        set_job_status(args.slurm_id, args.index, dict(end_time=datetime.datetime.now(), duration=datetime.datetime.now()-start_time, status=0, status_text="done"))
