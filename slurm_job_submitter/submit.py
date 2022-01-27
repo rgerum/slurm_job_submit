@@ -149,13 +149,10 @@ def submit():
 
     submit = subprocess.check_output(["sbatch", "job.sh"])
 
-    try:
-        batch_id = int(submit.split()[-1])
-        print("batch_id", batch_id)
-        for i in range(length):
-            set_job_status(batch_id, i, [start_time, time.time(), -1, "submitted"])
-    except ValueError as err:
-        raise err
+    batch_id = int(submit.split()[-1])
+    print("batch_id", batch_id)
+    for i in range(length):
+        set_job_status(batch_id, i, [-1, -1, -1, "submitted"])
 
 
 def set_job_status(slurm_id, index, status):
