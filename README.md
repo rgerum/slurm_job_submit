@@ -1,4 +1,4 @@
-# Slurm Job Submit
+# Slurm Job Submitter
 
 The Slurm Job Submitter is a small python package that allows you to easly run python scripts on a SLURM scheduler.
 
