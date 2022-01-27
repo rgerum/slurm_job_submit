@@ -1,14 +1,14 @@
 from setuptools import setup
 
-setup(name='slurm_job_submit',
+setup(name='slurm_job_submitter',
       version="0.1",
-      packages=['slurm_job_submit'],
+      packages=['slurm_job_submitter'],
       description='Submit SLURM jobs',
       author='Richard Gerum',
       author_email='richard.gerum@fau.de',
       license='MIT',
       entry_points={
-          'console_scripts': ['pysubmit=slurm_job_submit.submit:submit', 'pysubmit_start=slurm_job_submit.submit:start'],
+          'console_scripts': ['pysubmit=slurm_job_submitter.submit:submit', 'pysubmit_start=slurm_job_submitter.submit:start'],
       },
       install_requires=[],
 )

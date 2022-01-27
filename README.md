@@ -5,7 +5,7 @@ The Slurm Job Submitter is a small python package that allows you to easly run p
 ## Installation
 You can install it directly from github using pip:
 
-	pip install git+https://github.com/rgerum/slurm_job_submit
+	pip install git+https://github.com/rgerum/slurm_job_submitter
 
 ## Usage
 The slurm job submitter has different modes of operation.

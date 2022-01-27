@@ -81,7 +81,7 @@ def submit():
         print("ERROR: define your own account in run_job.sh")
         return
 
-    file_content = file_content.replace("$COMMAND", "pip install git+https://github.com/rgerum/slurm_job_submit\n"+command)
+    file_content = file_content.replace("$COMMAND", "pip install git+https://github.com/rgerum/slurm_job_submitter\n"+command)
 
     file_content = f"""#!/bin/bash
 #SBATCH --array=0-{length}
