@@ -30,7 +30,7 @@ job submission with
 
 It will then start each line of the "jobs.dat" file as a command.
 
-See [Example Commands](/tree/main/examples/commands)
+See [Example Commands](/examples/commands)
 
 ### Python files
 Define a csv file defining all the parameter that you want to call, e.g. "jobs.csv", 
@@ -43,7 +43,7 @@ The python file will be called with:
 
     python file.py --argname1 value1 --argname2 value2 ...
 
-See [Example Python Files](/tree/main/examples/python_files)
+See [Example Python Files](/examples/python_files)
 
 ### Python functions
 Define a csv file defining all the parameter that you want to call, e.g. "jobs.csv", 
@@ -56,7 +56,7 @@ The function will be called with the parameters as keyword arguments:
 
     main(argname1=value1, argname2=value2, ...)
 
-See [Example Python Functions](/tree/main/examples/python_functions)
+See [Example Python Functions](/examples/python_functions)
 
 ## Status
 To print the current status of the processes call
