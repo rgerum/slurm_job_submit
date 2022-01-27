@@ -119,7 +119,7 @@ def submit():
     with open("job.sh", "w") as fp:
         fp.write(file_content)
 
-    #os.system("sbatch job.sh")
+    os.system("sbatch job.sh")
 
 def start():
     # if the first argument is a python file or a python function
