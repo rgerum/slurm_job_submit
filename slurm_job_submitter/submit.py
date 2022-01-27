@@ -147,7 +147,7 @@ def submit():
     with open("job.sh", "w") as fp:
         fp.write(file_content)
 
-    submit = subprocess.check_output("sbatch job.sh")
+    submit = subprocess.check_output(["sbatch", "job.sh"])
 
     try:
         batch_id = int(submit.split()[-1])
