@@ -5,29 +5,41 @@ import importlib
 from pathlib import Path
 import csv
 
+# default job script that gets created if no job script is present
 run_job = """
 #SBATCH --account=YOUR_ACCOUNT
 #SBATCH --time=24:00:00
 #SBATCH --gres=gpu:1
 #SBATCH --mem-per-cpu=64000M
 
+# store start time
+start=`date +%s.%N`
+
+# load modules
 echo "load"
 module load python/3.6 cuda cudnn
+
+# create and activate virtual environment
 echo "create env"
 virtualenv --no-download  $SLURM_TMPDIR/tensorflow_env
-source $SLURM_TMPDIR/tensorflow_env
+source $SLURM_TMPDIR/tensorflow_env/bin/activate
+
+# install python packages
 pip install --no-index --upgrade pip
 pip install --no-index tensorflow_gpu numpy pandas matplotlib pyyaml tensorflow_datasets
-echo "clone"
-git clone . $SLURM_TMPDIR/repo
-echo "copy"
-cd $SLURM_TMPDIR/repo
-echo "run"
-pwd
-ls
-echo "run $(date '+%d/%m/%Y %H:%M:%S')"
+
+# store end time of preparation
+end_prep=`date +%s.%N`
+runtime_prep=$( echo "$end_prep - $start" | bc -l )
+echo "Preparation finished. Execution took $runtime_prep seconds. $(date '+%d/%m/%Y %H:%M:%S')"
+
+# running main command
 $COMMAND
-echo "done"
+
+# store end time and print finished message
+end=`date +%s.%N`
+runtime=$( echo "$end - $start" | bc -l )
+echo "Done. Execution took $runtime seconds."
 """
 
 def read_csv(filename, row_index=None):
@@ -120,6 +132,7 @@ def submit():
         fp.write(file_content)
 
     os.system("sbatch job.sh")
+
 
 def start():
     # if the first argument is a python file or a python function
