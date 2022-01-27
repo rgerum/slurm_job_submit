@@ -70,4 +70,9 @@ To print the current status of the processes call
 
 The status is stored in the file "slurm-list.csv".
 ## Resubmit
-TODO
+As Slurm Job Submitter stores the status of each job, jobs can also easily be resubmitted.
+Just add "resubmit" after the "pysubmit" command and then the python file or data fiale to run.
+
+    pysubmit resubmit run.py jobs.csv
+
+Only the jobs that have not run through completely will (e.g. cancelled, error, or timeout) be restarted. 

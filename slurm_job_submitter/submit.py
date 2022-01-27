@@ -81,6 +81,26 @@ def submit():
         else:
             print("No jobs submitted yet.")
         exit()
+
+    array_list = None
+    if len(sys.argv) >= 1 and sys.argv[1] == "resubmit":
+        if not Path("slurm-list.csv").exists():
+            print("No jobs to resubmit")
+            return
+        with open(f"slurm-list.csv", "r") as fp:
+            data = list(csv.reader(fp))
+
+        keys = data[0]
+        array_list = []
+        for index in range(1, len(data)):
+            d = {key: value for key, value in zip(keys, data[index])}
+            if d["status"] == "-1":
+                array_list.append(int(d["id"]))
+        print(array_list)
+        array_command = ",".join([str(s) for s in array_list])
+        print(f"resubmitting {len(array_list)} jobs:", array_command)
+        sys.argv.pop(1)
+
     if len(sys.argv) >= 1 and sys.argv[1] == "start":
         sys.argv.pop(1)
         start()
@@ -153,10 +173,14 @@ def submit():
         print("ERROR: define your own account in run_job.sh")
         return
 
+    if array_list is None:
+        array_command = f"0-{length}"
+        array_list = range(length)
+
     file_content = file_content.replace("$COMMAND", "pip install git+https://github.com/rgerum/slurm_job_submitter\n"+command)
 
     file_content = f"""#!/bin/bash
-#SBATCH --array=0-{length}
+#SBATCH --array={array_command}
 
 """+file_content
 
@@ -172,13 +196,16 @@ def submit():
         return
 
     batch_id = int(submit.split()[-1])
-    print("batch_id", batch_id)
+
     for i in range(length):
-        set_job_status(batch_id, i, dict(status_text="submitted", command=commands[i]))
+        if i in array_list:
+            set_job_status(batch_id, i, dict(status_text="submitted", command=commands[i]))
 
 
 def set_job_status(slurm_id, index, status):
-    id = f"{slurm_id}_{index}"
+    id = str(index)
+    job_id = f"{slurm_id}_{index}"
+    status["job_id"] = job_id
     while True:
         try:
             with open(f"slurm-lock", "w") as fp0:
@@ -188,8 +215,8 @@ def set_job_status(slurm_id, index, status):
                 else:
                     data = []
 
-                keys = ["id", "start_time", "end_time", "duration", "status", "status_text", "command"]
-                default = dict(id=id, start_time=-1, end_time=-1, duration=-1, status=-1, status_text="none", command="n/a")
+                keys = ["id", "job_id", "start_time", "end_time", "duration", "status", "status_text", "command"]
+                default = dict(id=id, job_id=job_id, start_time=-1, end_time=-1, duration=-1, status=-1, status_text="none", command="n/a")
 
                 if len(data) == 0:
                     data.append(keys)
@@ -203,6 +230,7 @@ def set_job_status(slurm_id, index, status):
                     data.append([])
                     index = len(data)-1
                 default.update(status)
+
                 data[index] = [default[key] for key in keys]
                 with open(f"slurm-list.csv", "w") as fp:
                     for row in data:
