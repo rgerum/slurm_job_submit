@@ -6,4 +6,3 @@ parser.add_argument('--strength', type=float)
 
 args = parser.parse_args()
 print("I am called with", args)
-#a = b
