@@ -79,7 +79,7 @@ def clear():
     for file in files:
         print("  ", file)
     print(f"Do you want to delete all the listed files? (y/n)")
-    if input() == "y" or sys.argv[2] == "-y":
+    if "-y" in sys.argv or input() == "y":
         os.system("rm slurm*")
         print(f"Removed {len(files)} files")
     exit()

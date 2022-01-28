@@ -22,6 +22,7 @@ also created.
 
 The slurm job submitter has different modes of operation.
 
+## Submit
 ### Arbitrary commands
 Define a text file with one command in each line, e.g. called "jobs.dat". You can start the 
 job submission with
@@ -76,3 +77,19 @@ Just add "resubmit" after the "pysubmit" command and then the python file or dat
     pysubmit resubmit run.py jobs.csv
 
 Only the jobs that have not run through completely will (e.g. cancelled, error, or timeout) be restarted. 
+
+## Clear
+To clear all slurm job submitter and slurm logs call
+
+    pysubmit clear
+
+adding the "-y" flag removes the prompt.
+## Cancel
+To cancel all currently running jobs call which where started form this folder
+
+    pysubmit cancel
+
+## Log
+Print the log of the Nth job
+
+    pysubmit log N
