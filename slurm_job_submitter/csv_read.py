@@ -41,9 +41,26 @@ def write_csv(file, data):
         fp.write(text)
 
 
-if __name__ == "__main__":
-    write_csv("tmp.csv", [
-        dict(a="a"),
-        dict(b=10, a=None, c="new"),
-    ])
-    print(read_csv("tmp.csv"))
+def set_job_status(status, slurm_id=None, index=None):
+    if index is None:
+        id = os.environ["SJS_SLURM_JOB_ID"]
+    else:
+        id = str(index)
+
+    while True:
+        try:
+            with open(f"slurm-lock", "w") as fp0:
+                data = read_csv(SLURM_LIST)
+
+                for index in range(len(data)):
+                    if int(data[index].get("id", None)) == int(id):
+                        data[index].update(status)
+                        break
+                else:
+                    data.append(status)
+
+                write_csv(SLURM_LIST, data)
+            break
+        except IOError as err:
+            print(err, "waiting for slurm-lock")
+            time.sleep(0.001)

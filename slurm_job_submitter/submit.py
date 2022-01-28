@@ -10,88 +10,124 @@ import signal
 import datetime
 
 from .default_jobscript import run_job
-from .csv_read import read_csv, write_csv
+from .csv_read import read_csv, write_csv, set_job_status
 
 SLURM_LIST = "slurm-list.csv"
 
-def submit():
+
+def init():
+    """
+    pysubmit init
+    This command creates a run_job file
+    """
+    with open("run_job.sh", "w") as fp:
+        fp.write(run_job)
+    print("File run_job.sh created.")
+    exit()
+
+
+def log():
+    """
+    pysubmit log N
+    This command prints the log from job number N
+    """
+    if len(sys.argv) < 3:
+        print("Provide a job number")
+        exit()
+    try:
+        # read the job status list
+        data = read_csv(SLURM_LIST)
+        d = data[int(sys.argv[2])]
+    except ValueError:
+        print(f"{sys.argv[2]} is not a valid number")
+        exit()
+    except IndexError:
+        print(f"No job with id {sys.argv[2]}")
+        exit()
+    os.system(f"cat slurm-{d['job_id']}.out")
+    exit()
+
+
+def cancel():
+    """
+    pysubmit cancel
+    This command cancels all the current jobs.
+    """
+    # read the job status list
+    data = read_csv(SLURM_LIST)
+    # get the job ids
+    job_ids = {d["job_id"].split("_")[0] for d in data if d["status_text"] not in ["submitted", "running"]}
+    # cancel them
+    try:
+        subprocess.check_output(["scancel", *job_ids])  # "--signal=TERM"
+    except subprocess.CalledProcessError:
+        # omit the python error here as sbatch already should have printed an error message
+        pass
+    exit()
+
+
+def clear():
+    """
+    pysubmit clear
+    This command clears all the output from slurm job submitter and slurm
+    """
+    files = [r for r in Path(".").glob("slurm*")]
+    if len(files) == 0:
+        print("No files to clear")
+        exit()
+    print("Remove the files")
+    for file in files:
+        print("  ", file)
+    print(f"Do you want to delete all the listed files? (y/n)")
+    if input() == "y" or sys.argv[2] == "-y":
+        os.system("rm slurm*")
+        print(f"Removed {len(files)} files")
+    exit()
+
+
+def status():
+    """
+    pysubmit status
+    This command prints the current status of all jobs.
+    """
+    if Path(SLURM_LIST).exists():
+        os.system("cat slurm-list.csv | column -t -s,")
+    else:
+        print("No jobs submitted yet.")
+    exit()
+
+def resubmit():
+    """
+    pysubmit resubmit SCRIPT DATAFILE
+    pysubmit resubmit DATAFILE
+    Resubmit only jobs that have not been finished successfully yet.
+    """
+    # read the job status list
+    data = read_csv(SLURM_LIST)
+
+    # filter only the unfinished jobs
+    array_list = [int(d["id"]) for d in data if d["status"] == "-1"]
+
+    if len(array_list) == 0:
+        print("No jobs to resubmit")
+        exit()
+
+    # print the list
+    array_command = ",".join([str(s) for s in array_list])
+    print(f"resubmitting {len(array_list)} jobs:", array_command)
+    sys.argv.pop(1)
+
+    submit(array_list, array_command)
+
+
+def submit(array_list=None, array_command=None):
+    """
+    pysubmit submit SCRIPT DATAFILE
+    pysubmit submit DATAFILE
+    Submit all jobs found in DATAFILE.
+    """
     length = 0
-    array_list = None
 
-    if len(sys.argv) >= 1:
-        if sys.argv[1] == "init":
-            with open("run_job.sh", "w") as fp:
-                fp.write(run_job)
-            print("File run_job.sh created.")
-            exit()
-        elif sys.argv[1] == "log":
-            if len(sys.argv) < 3:
-                print("Provide a job number")
-                exit()
-            try:
-                # read the job status list
-                data = read_csv(SLURM_LIST)
-                d = data[int(sys.argv[2])]
-            except ValueError:
-                print(f"{sys.argv[2]} is not a valid number")
-                exit()
-            except IndexError:
-                print(f"No job with id {sys.argv[2]}")
-                exit()
-            os.system(f"cat slurm-{d['job_id']}.out")
-            exit()
-        elif sys.argv[1] == "cancel":
-            # read the job status list
-            data = read_csv(SLURM_LIST)
-            # get the job ids
-            job_ids = {d["job_id"].split("_")[0] for d in data if d["status_text"] not in ["submitted", "running"]}
-            # cancel them
-            try:
-                subprocess.check_output(["scancel", *job_ids]) # "--signal=TERM"
-            except subprocess.CalledProcessError:
-                # omit the python error here as sbatch already should have printed an error message
-                pass
-            exit()
-        elif sys.argv[1] == "clear":
-            files = [r for r in Path(".").glob("slurm*")]
-            if len(files) == 0:
-                print("No files to clear")
-                exit()
-            print("Remove the files")
-            for file in files:
-                print("  ", file)
-            print(f"Do you want to delete all the listed files? (y/n)")
-            if input() == "y" or sys.argv[2] == "-y":
-                os.system("rm slurm*")
-                print(f"Removed {len(files)} files")
-            exit()
-        elif sys.argv[1] == "status":
-            if Path(SLURM_LIST).exists():
-                os.system("cat slurm-list.csv | column -t -s,")
-            else:
-                print("No jobs submitted yet.")
-            exit()
-        elif sys.argv[1] == "submit":
-            sys.argv.pop(1)
-        elif sys.argv[1] == "resubmit":
-            # read the job status list
-            data = read_csv(SLURM_LIST)
-
-            # filter only the unfinished jobs
-            array_list = [int(d["id"]) for d in data if d["status"] == "-1"]
-
-            if len(array_list) == 0:
-                print("No jobs to resubmit")
-                exit()
-
-            # print the list
-            array_command = ",".join([str(s) for s in array_list])
-            print(f"resubmitting {len(array_list)} jobs:", array_command)
-            sys.argv.pop(1)
-        elif sys.argv[1] == "start":
-            sys.argv.pop(1)
-            start()
-            exit()
     # if the first argument is a python file or a python function
     if len(sys.argv) >= 2 and (sys.argv[1].endswith(".py") or ".py:" in sys.argv[1]):
         # then the second argument should be a csv file
@@ -108,7 +144,7 @@ def submit():
         commands = []
         for data in read_csv(sys.argv[2]):
             if ":" in sys.argv[1]:
-                commands.append(sys.argv[1]+"("+" ".join([f"{key}={value}" for key, value in data.items()])+")")
+                commands.append(sys.argv[1] + "(" + " ".join([f"{key}={value}" for key, value in data.items()]) + ")")
             else:
                 # assemble the commands to call the file
                 cmd = [sys.argv[1]]
@@ -152,7 +188,8 @@ def submit():
     except FileNotFoundError:
         with open("run_job.sh", "w") as fp:
             fp.write(run_job)
-        print("ERROR: You need to define job script run_job.sh.\nI just created a template run_job.sh.\nPlease edit it and change the line with #SBATCH --account=YOUR_ACCOUNT to your account name.")
+        print(
+            "ERROR: You need to define job script run_job.sh.\nI just created a template run_job.sh.\nPlease edit it and change the line with #SBATCH --account=YOUR_ACCOUNT to your account name.")
         return
 
     if "#SBATCH --account=YOUR_ACCOUNT" in file_content:
@@ -163,14 +200,15 @@ def submit():
         array_command = f"0-{length}"
         array_list = range(length)
 
-    file_content = file_content.replace("$COMMAND", "pip install git+https://github.com/rgerum/slurm_job_submitter\n"+command)
+    file_content = file_content.replace("$COMMAND",
+                                        "pip install git+https://github.com/rgerum/slurm_job_submitter\n" + command)
 
     file_content = f"""#!/bin/bash
-#SBATCH --array={array_command}
+    #SBATCH --array={array_command}
 
-"""+file_content
+    """ + file_content
 
-    #print(file_content)
+    # print(file_content)
 
     with open("job.sh", "w") as fp:
         fp.write(file_content)
@@ -185,35 +223,17 @@ def submit():
 
     for i in range(length):
         if i in array_list:
-            set_job_status(dict(id=i, job_id=f"{batch_id}_{i}", start_time=None, end_time=None, duration=None, status=-1,
-                                status_text="submitted", command=commands[i]), batch_id, i)
+            set_job_status(
+                dict(id=i, job_id=f"{batch_id}_{i}", start_time=None, end_time=None, duration=None, status=-1,
+                     status_text="submitted", command=commands[i]), batch_id, i)
 
-
-def set_job_status(status, slurm_id=None, index=None):
-    if index is None:
-        id = os.environ["SJS_SLURM_JOB_ID"]
-    else:
-        id = str(index)
-
-    while True:
-        try:
-            with open(f"slurm-lock", "w") as fp0:
-                data = read_csv(SLURM_LIST)
-
-                for index in range(len(data)):
-                    if int(data[index].get("id", None)) == int(id):
-                        data[index].update(status)
-                        break
-                else:
-                    data.append(status)
-
-                write_csv(SLURM_LIST, data)
-            break
-        except IOError as err:
-            print(err, "waiting for slurm-lock")
-            time.sleep(0.001)
 
 def start():
+    """
+    pysubmit start SCRIPT DATAFILE JOB_NUMBER
+    pysubmit start DATAFILE JOB_NUMBER
+    Start the job JOB_NUMBER from DATAFILE.
+    """
     parser = argparse.ArgumentParser(description='Call a python script of function.')
     if sys.argv[1].endswith(".py") or ".py:" in sys.argv[1]:
         parser.add_argument('script', type=str, help='the script to call')
@@ -280,3 +300,26 @@ def start():
     if args.slurm_id is not None:
         set_job_status(dict(end_time=datetime.datetime.now(), duration=datetime.datetime.now() - start_time, status=0,
                             status_text="done"), args.slurm_id, args.index)
+
+
+def main():
+    if len(sys.argv) >= 1:
+        if sys.argv[1] == "init":
+            return init()
+        elif sys.argv[1] == "log":
+            return log()
+        elif sys.argv[1] == "cancel":
+            return cancel()
+        elif sys.argv[1] == "clear":
+            return clear()
+        elif sys.argv[1] == "status":
+            return status()
+        elif sys.argv[1] == "submit":
+            sys.argv.pop(1)
+            return submit()
+        elif sys.argv[1] == "resubmit":
+            return resubmit()
+        elif sys.argv[1] == "start":
+            sys.argv.pop(1)
+            return start()
+    return submit()
