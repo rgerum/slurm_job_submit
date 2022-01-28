@@ -155,7 +155,7 @@ def submit():
         fp.write(file_content)
 
     try:
-        submit = "submitting 1234"#subprocess.check_output(["sbatch", "job.sh"])
+        submit = subprocess.check_output(["sbatch", "job.sh"])
     except subprocess.CalledProcessError:
         # omit the python error here as sbatch already should have printed an error message
         return
