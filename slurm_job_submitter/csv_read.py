@@ -22,8 +22,9 @@ def read_csv(file):
     if keys[0] == "":
         keys = keys[1:]
     rows = []
-    for index in range(1, len(data)):
-        rows.append({key: value for key, value in zip(keys, data[index])})
+    for d in data[1:]:
+        if len(d):
+            rows.append({key: value for key, value in zip(keys, d)})
     return rows
 
 def write_csv(file, data):
@@ -38,6 +39,7 @@ def write_csv(file, data):
 
     with open(file, "w") as fp:
         fp.write(text)
+
 
 if __name__ == "__main__":
     write_csv("tmp.csv", [
