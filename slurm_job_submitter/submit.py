@@ -9,104 +9,70 @@ import time
 import signal
 import datetime
 
-# default job script that gets created if no job script is present
-run_job = """
-#SBATCH --account=YOUR_ACCOUNT
-#SBATCH --time=24:00:00
-#SBATCH --gres=gpu:1
-#SBATCH --mem-per-cpu=64000M
+from .default_jobscript import run_job
+from .csv_read import read_csv, write_csv
 
-# store start time
-start=`date +%s.%N`
-
-# load modules
-echo "load"
-module load python/3.6 cuda cudnn
-
-# create and activate virtual environment
-echo "create env"
-virtualenv --no-download  $SLURM_TMPDIR/tensorflow_env
-source $SLURM_TMPDIR/tensorflow_env/bin/activate
-
-# install python packages
-pip install --no-index --upgrade pip
-pip install --no-index tensorflow_gpu numpy pandas matplotlib pyyaml tensorflow_datasets
-
-# store end time of preparation
-end_prep=`date +%s.%N`
-runtime_prep=$( echo "$end_prep - $start" | bc -l )
-echo "Preparation finished. Execution took $runtime_prep seconds. $(date '+%d/%m/%Y %H:%M:%S')"
-
-# running main command
-$COMMAND
-
-# store end time and print finished message
-end=`date +%s.%N`
-runtime=$( echo "$end - $start" | bc -l )
-echo "Done. Execution took $runtime seconds."
-"""
-
-def read_csv(filename, row_index=None):
-    with open(filename, "r") as fp:
-        data = list(csv.reader(fp))
-
-    if row_index is None:
-        return data[1:]
-    row = {}
-    for i, key in enumerate(data[0]):
-        if i == 0 and key == "":
-            continue
-        row[key] = data[row_index+1][i]
-        # parse as int or float
-        try:
-            row[key] = int(row[key])
-        except ValueError:
-            try:
-                row[key] = float(row[key])
-            except ValueError:
-                pass
-    return row
-
+SLURM_LIST = "slurm-list.csv"
 
 def submit():
     length = 0
-    if len(sys.argv) >= 1 and sys.argv[1] == "init":
-        with open("run_job.sh", "w") as fp:
-            fp.write(run_job)
-        print("File run_job.sh created.")
-        exit()
-    if len(sys.argv) >= 1 and sys.argv[1] == "status":
-        if Path("slurm-list.csv").exists():
-            os.system("cat slurm-list.csv | column -t -s,")
-        else:
-            print("No jobs submitted yet.")
-        exit()
-
     array_list = None
-    if len(sys.argv) >= 1 and sys.argv[1] == "resubmit":
-        if not Path("slurm-list.csv").exists():
-            print("No jobs to resubmit")
-            return
-        with open(f"slurm-list.csv", "r") as fp:
-            data = list(csv.reader(fp))
 
-        keys = data[0]
-        array_list = []
-        for index in range(1, len(data)):
-            d = {key: value for key, value in zip(keys, data[index])}
-            if d["status"] == "-1":
-                array_list.append(int(d["id"]))
-        print(array_list)
-        array_command = ",".join([str(s) for s in array_list])
-        print(f"resubmitting {len(array_list)} jobs:", array_command)
-        sys.argv.pop(1)
+    if len(sys.argv) >= 1:
+        if sys.argv[1] == "init":
+            with open("run_job.sh", "w") as fp:
+                fp.write(run_job)
+            print("File run_job.sh created.")
+            exit()
+        elif sys.argv[1] == "cancel":
+            # read the job status list
+            data = read_csv(SLURM_LIST)
+            # get the job ids
+            job_ids = {d["job_id"].split("_")[0] for d in data}
+            # cancel them
+            subprocess.check_call(["scancel", "--signal=TERM", *job_ids])
+        elif sys.argv[1] == "clear":
+            files = [r for r in Path(".").glob("slurm*")]
+            if len(files) == 0:
+                print("No files to clear")
+                return
+            print("Remove the files")
+            for file in files:
+                print("  ", file)
+            print(f"Do you want to delete all the listed files? (y/n)")
+            if input() == "y":
+                os.system("rm slurm*")
+                print(f"Removed {len(files)} files")
+            exit()
+        elif sys.argv[1] == "status":
+            if Path(SLURM_LIST).exists():
+                os.system("cat slurm-list.csv | column -t -s,")
+            else:
+                print("No jobs submitted yet.")
+            exit()
+        elif sys.argv[1] == "submit":
+            sys.argv.pop(1)
+        elif sys.argv[1] == "resubmit":
+            # read the job status list
+            data = read_csv(SLURM_LIST)
 
-    if len(sys.argv) >= 1 and sys.argv[1] == "start":
-        sys.argv.pop(1)
-        start()
-        exit()
+            # filter only the unfinished jobs
+            array_list = [int(d["id"]) for d in data if d["status"] == "-1"]
+
+            if len(array_list) == 0:
+                print("No jobs to resubmit")
+                return
+
+            # print the list
+            array_command = ",".join([str(s) for s in array_list])
+            print(f"resubmitting {len(array_list)} jobs:", array_command)
+            sys.argv.pop(1)
+        elif sys.argv[1] == "start":
+            sys.argv.pop(1)
+            start()
+            exit()
     # if the first argument is a python file or a python function
-    elif len(sys.argv) >= 2 and (sys.argv[1].endswith(".py") or ".py:" in sys.argv[1]):
+    if len(sys.argv) >= 2 and (sys.argv[1].endswith(".py") or ".py:" in sys.argv[1]):
         # then the second argument should be a csv file
         try:
             data = read_csv(sys.argv[2])
@@ -119,8 +85,7 @@ def submit():
             exit()
 
         commands = []
-        for i in range(length):
-            data = read_csv(sys.argv[2], i)
+        for data in read_csv(sys.argv[2]):
             if ":" in sys.argv[1]:
                 commands.append(sys.argv[1]+"("+" ".join([f"{key}={value}" for key, value in data.items()])+")")
             else:
@@ -190,7 +155,7 @@ def submit():
         fp.write(file_content)
 
     try:
-        submit = subprocess.check_output(["sbatch", "job.sh"])
+        submit = "submitting 1234"#subprocess.check_output(["sbatch", "job.sh"])
     except subprocess.CalledProcessError:
         # omit the python error here as sbatch already should have printed an error message
         return
@@ -199,42 +164,29 @@ def submit():
 
     for i in range(length):
         if i in array_list:
-            set_job_status(batch_id, i, dict(status_text="submitted", command=commands[i]))
+            set_job_status(dict(id=i, job_id=f"{batch_id}_{i}", start_time=None, end_time=None, duration=None, status=-1,
+                                status_text="submitted", command=commands[i]), batch_id, i)
 
 
-def set_job_status(slurm_id, index, status):
-    id = str(index)
-    job_id = f"{slurm_id}_{index}"
-    status["job_id"] = job_id
+def set_job_status(status, slurm_id=None, index=None):
+    if index is None:
+        id = os.environ["SJS_SLURM_JOB_ID"]
+    else:
+        id = str(index)
+
     while True:
         try:
             with open(f"slurm-lock", "w") as fp0:
-                if Path("slurm-list.csv").exists():
-                    with open(f"slurm-list.csv", "r") as fp:
-                        data = list(csv.reader(fp))
-                else:
-                    data = []
+                data = read_csv(SLURM_LIST)
 
-                keys = ["id", "job_id", "start_time", "end_time", "duration", "status", "status_text", "command"]
-                default = dict(id=id, job_id=job_id, start_time=-1, end_time=-1, duration=-1, status=-1, status_text="none", command="n/a")
-
-                if len(data) == 0:
-                    data.append(keys)
-
-                index = 0
                 for index in range(len(data)):
-                    if len(data[index]) and data[index][0] == id:
-                        default.update({key: value for key, value in zip(keys, data[index])})
+                    if data[index].get("id", None) == id:
+                        data[index].update(status)
                         break
                 else:
-                    data.append([])
-                    index = len(data)-1
-                default.update(status)
+                    data.append(status)
 
-                data[index] = [default[key] for key in keys]
-                with open(f"slurm-list.csv", "w") as fp:
-                    for row in data:
-                        fp.write(",".join([str(r) for r in row])+"\n")
+                write_csv(SLURM_LIST, data)
             break
         except IOError as err:
             print(err, "waiting for slurm-lock")
@@ -254,21 +206,24 @@ def start():
     # Definition of the signal handler. All it does is flip the 'interrupted' variable
     def signal_handler(signum, frame):
         if args.slurm_id is not None:
-            set_job_status(args.slurm_id, args.index, dict(end_time=datetime.datetime.now(), duration=datetime.datetime.now()-start_time, status_text="cancel"))
+            set_job_status(dict(end_time=datetime.datetime.now(), duration=datetime.datetime.now() - start_time,
+                                status_text="cancel"), args.slurm_id, args.index)
 
     # Register the signal handler
     signal.signal(signal.SIGTERM, signal_handler)
 
     if args.slurm_id is not None:
+        os.environ["SJS_SLURM_JOB_ID"] = str(args.index)
+        os.environ["SJS_SLURM_ID"] = str(args.slurm_id)
         start_time = datetime.datetime.now()
-        set_job_status(args.slurm_id, args.index, dict(start_time=start_time, status_text="running"))
+        set_job_status(dict(start_time=start_time, status_text="running"), args.slurm_id, args.index)
 
     try:
         # if the first argument is a python file or a python function
         if getattr(args, "script", None) is not None:
 
             # then the second argument should be a csv file we load with pandas
-            data = read_csv(args.datafile, args.index)
+            data = read_csv(args.datafile)[args.index]
 
             # is it a python function?
             if ":" in args.script:
@@ -297,8 +252,10 @@ def start():
             #os.system(command)
     except subprocess.CalledProcessError as err:
         if args.slurm_id is not None:
-            set_job_status(args.slurm_id, args.index, dict(end_time=datetime.datetime.now(), duration=datetime.datetime.now()-start_time, status_text="error"))
+            set_job_status(dict(end_time=datetime.datetime.now(), duration=datetime.datetime.now() - start_time,
+                                status_text="error"), args.slurm_id, args.index)
         raise
 
     if args.slurm_id is not None:
-        set_job_status(args.slurm_id, args.index, dict(end_time=datetime.datetime.now(), duration=datetime.datetime.now()-start_time, status=0, status_text="done"))
+        set_job_status(dict(end_time=datetime.datetime.now(), duration=datetime.datetime.now() - start_time, status=0,
+                            status_text="done"), args.slurm_id, args.index)
