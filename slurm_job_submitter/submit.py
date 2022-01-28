@@ -10,9 +10,7 @@ import signal
 import datetime
 
 from .default_jobscript import run_job
-from .csv_read import read_csv, write_csv, set_job_status
-
-SLURM_LIST = "slurm-list.csv"
+from .csv_read import read_csv, write_csv, set_job_status, SLURM_LIST
 
 
 def init():

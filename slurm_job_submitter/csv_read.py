@@ -1,6 +1,9 @@
 import csv
 from pathlib import Path
-from .submit import SLURM_LIST
+
+
+SLURM_LIST = "slurm-list.csv"
+SLURM_LOCK = "slurm-lock"
 
 
 def parse_value(value):
@@ -53,7 +56,7 @@ def set_job_status(status, slurm_id=None, index=None):
 
     while True:
         try:
-            with open(f"slurm-lock", "w") as fp0:
+            with open(SLURM_LOCK, "w") as fp0:
                 data = read_csv(SLURM_LIST)
 
                 for index in range(len(data)):
