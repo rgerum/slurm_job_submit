@@ -130,3 +130,6 @@ dmypy.json
 
 .idea/
 run_job.sh
+slurm-list.csv
+slurm-lock
+job.sh
