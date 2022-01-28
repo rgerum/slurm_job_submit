@@ -93,3 +93,13 @@ To cancel all currently running jobs call which where started form this folder
 Print the log of the Nth job
 
     pysubmit log N
+
+## Logging Progress
+Python scripts can add values to the status (i.e. the slurm-list.csv) by calling
+the function set_job_status. The dictionary argument provides the new columns to add.
+```python
+from slurm_job_submitter import set_job_status
+set_job_status(dict(process="30%"))
+```
+As the running jobs have to wait to edit the slurm-list.csv file if another process is writing on it, 
+prevent excessive use of this function as it might slow down your jobs.
