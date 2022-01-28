@@ -24,23 +24,44 @@ def submit():
                 fp.write(run_job)
             print("File run_job.sh created.")
             exit()
+        elif sys.argv[1] == "log":
+            if len(sys.argv) < 3:
+                print("Provide a job number")
+                exit()
+            try:
+                # read the job status list
+                data = read_csv(SLURM_LIST)
+                d = data[int(sys.argv[2])]
+            except ValueError:
+                print(f"{sys.argv[2]} is not a valid number")
+                exit()
+            except IndexError:
+                print(f"No job with id {sys.argv[2]}")
+                exit()
+            os.system(f"cat slurm-{d['job_id']}.out")
+            exit()
         elif sys.argv[1] == "cancel":
             # read the job status list
             data = read_csv(SLURM_LIST)
             # get the job ids
-            job_ids = {d["job_id"].split("_")[0] for d in data}
+            job_ids = {d["job_id"].split("_")[0] for d in data if d["status_text"] not in ["submitted", "running"]}
             # cancel them
-            subprocess.check_call(["scancel", "--signal=TERM", *job_ids])
+            try:
+                subprocess.check_output(["scancel", *job_ids]) # "--signal=TERM"
+            except subprocess.CalledProcessError:
+                # omit the python error here as sbatch already should have printed an error message
+                pass
+            exit()
         elif sys.argv[1] == "clear":
             files = [r for r in Path(".").glob("slurm*")]
             if len(files) == 0:
                 print("No files to clear")
-                return
+                exit()
             print("Remove the files")
             for file in files:
                 print("  ", file)
             print(f"Do you want to delete all the listed files? (y/n)")
-            if input() == "y":
+            if input() == "y" or sys.argv[2] == "-y":
                 os.system("rm slurm*")
                 print(f"Removed {len(files)} files")
             exit()
@@ -61,7 +82,7 @@ def submit():
 
             if len(array_list) == 0:
                 print("No jobs to resubmit")
-                return
+                exit()
 
             # print the list
             array_command = ",".join([str(s) for s in array_list])
