@@ -1,5 +1,7 @@
 import csv
 from pathlib import Path
+from .submit import SLURM_LIST
+
 
 def parse_value(value):
     if value == "n/a":
@@ -11,6 +13,7 @@ def parse_value(value):
             return float(value)
         except ValueError:
             pass
+
 
 def read_csv(file):
     if not Path(file).exists():
@@ -27,10 +30,11 @@ def read_csv(file):
             rows.append({key: value for key, value in zip(keys, d)})
     return rows
 
+
 def write_csv(file, data):
     keys = []
     for d in data:
-        keys.extend([key for key in d.keys() if not key in keys])
+        keys.extend([key for key in d.keys() if key not in keys])
 
     text = ""
     text += ",".join([str(key) for key in list(keys)]) + "\n"
