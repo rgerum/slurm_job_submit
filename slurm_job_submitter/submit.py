@@ -201,7 +201,7 @@ def set_job_status(status, slurm_id=None, index=None):
                 data = read_csv(SLURM_LIST)
 
                 for index in range(len(data)):
-                    if data[index].get("id", None) == id:
+                    if int(data[index].get("id", None)) == int(id):
                         data[index].update(status)
                         break
                 else:
