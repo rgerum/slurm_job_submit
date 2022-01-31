@@ -25,12 +25,10 @@ def read_csv(file):
         data = list(csv.reader(fp))
 
     keys = data[0]
-    if keys[0] == "":
-        keys = keys[1:]
     rows = []
     for d in data[1:]:
         if len(d):
-            rows.append({key: value for key, value in zip(keys, d)})
+            rows.append({key: value for key, value in zip(keys, d) if key != ""})
     return rows
 
 
