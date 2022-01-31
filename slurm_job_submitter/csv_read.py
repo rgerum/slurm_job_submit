@@ -18,11 +18,14 @@ def parse_value(value):
             pass
 
 
-def read_csv(file):
-    if not Path(file).exists():
-        return []
-    with open(file, "r") as fp:
-        data = list(csv.reader(fp))
+def read_csv(filename):
+    if isinstance(filename, (Path, str)):
+        if not Path(filename).exists():
+            return []
+        with open(filename, "r") as fp:
+            data = list(csv.reader(fp))
+    else:
+        data = list(csv.reader(filename))
 
     keys = data[0]
     rows = []
