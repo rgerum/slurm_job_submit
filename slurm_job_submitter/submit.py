@@ -119,7 +119,7 @@ def status():
     pysubmit status
     This command prints the current status of all jobs.
     """
-    if sys.argv[2] == "update":
+    if len(sys.argv) >= 3 and sys.argv[2] == "update":
         import io
         # read the job status list
         data = read_csv(SLURM_LIST)
@@ -127,7 +127,7 @@ def status():
         # get the job ids
         job_ids = list({d["job_id"].split("_")[0] for d in data})
 
-        output = subprocess.check_output(f'sq -o "%i,%t,%T" -j {job_ids[0]}', text=True)
+        output = subprocess.check_output(f'sq -o "%i,%t,%T" -j {job_ids[0]}')
         output = read_csv(io.StringIO(output))
 
         data_ids = {d["id"]: i for i, d in enumerate(data)}
