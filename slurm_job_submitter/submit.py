@@ -123,14 +123,14 @@ def status():
         import io
         # read the job status list
         data = read_csv(SLURM_LIST)
-        print(data)
+
         # get the job ids
         job_ids = list({d["job_id"].split("_")[0] for d in data})
 
-        output = subprocess.check_output(['squeue', '-o', '"%i, %t, %T"', '-j', job_ids[0]])
+        output = subprocess.check_output(['squeue', '-o', '"%i, %t, %T"', '-j', ",".join(job_ids)])
         output = read_csv(io.StringIO(output.decode().replace('"', '')))
 
-        data_ids = {d["id"]: i for i, d in enumerate(data)}
+        slurm_states = {}
         for d in output:
             array_id, id = d["JOBID"].split("_", 1)
             if id.startswith("["):
@@ -139,8 +139,11 @@ def status():
             else:
                 id = [id]
             for i in id:
-                if i in data_ids and data[data_ids[i]] == f"{array_id}_{id}":
-                    data[data_ids[i]]["SLURM_STATE"] = d["STATE"]
+                slurm_states[str(i)] = d["STATE"]
+        for d in data:
+            state = slurm_states.get(str(d["id"]), "CANCELLED")
+            if d["status_text"] == "running" and state != "RUNNING":
+                d["status_text"] = "cancelled"
         write_csv(SLURM_LIST, data)
     if Path(SLURM_LIST).exists():
         # print the table
