@@ -127,8 +127,8 @@ def status():
         # get the job ids
         job_ids = list({d["job_id"].split("_")[0] for d in data})
 
-        output = subprocess.check_output(f'sq -o "%i,%t,%T" -j {job_ids[0]}')
-        output = read_csv(io.StringIO(output))
+        output = subprocess.check_output(['squeue', '-o', '"%i, %t, %T"', '-j', job_ids[0]])
+        output = read_csv(io.StringIO(output.decode().replace('"', '')))
 
         data_ids = {d["id"]: i for i, d in enumerate(data)}
         for d in output:
