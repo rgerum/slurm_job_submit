@@ -235,6 +235,9 @@ def submit(array_list=None, array_command=None):
         print("ERROR: define your own account in run_job.sh")
         return
 
+    # remove shebang if present
+    file_content.replace("#!/bin/bash\n", "")
+
     if array_list is None:
         array_command = f"0-{length}"
         array_list = range(length)
@@ -244,7 +247,6 @@ def submit(array_list=None, array_command=None):
 
     file_content = f"""#!/bin/bash
 #SBATCH --array={array_command}
-
 """ + file_content + "\n"
 
     # print(file_content)
