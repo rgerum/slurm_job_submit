@@ -1,10 +1,5 @@
 # default job script that gets created if no job script is present
 run_job = """
-#SBATCH --account=YOUR_ACCOUNT
-#SBATCH --time=24:00:00
-#SBATCH --gres=gpu:1
-#SBATCH --mem-per-cpu=64000M
-
 # store start time
 start=`date +%s.%N`
 

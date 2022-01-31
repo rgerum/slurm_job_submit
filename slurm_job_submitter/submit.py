@@ -18,8 +18,39 @@ def init():
     pysubmit init
     This command creates a run_job file
     """
+    keys = {"time": "24:00:00",
+            "gres": "gpu:1",
+            "mem-per-cpu": "64000M",
+            }
+    index = 1
+    shortcuts = {"A": "account", "t": "time", "a": "array"}
+    while index < len(sys.argv):
+        arg = sys.argv[index]
+        if arg.startswith("--"):
+            key, value = arg[2:].split("=", 1)
+            keys[key] = value
+        elif arg.startswith("-"):
+            key = arg[1:]
+            value = sys.argv[index+1]
+            if key in shortcuts:
+                key = key[shortcuts]
+            keys[key] = value
+            index += 1
+        index += 1
+    if "account" not in keys:
+        print("Add command line arguments for the SBATCH arguments.")
+        print("For example:")
+        print("pysubmit init --account=YOUR_ACCOUNT --time=24:00:00 --gres=gpu:1 --mem-per-cpu=64000M")
+        print("The account argument is required, the other ones are optional.")
+        exit()
+    if "array" in keys:
+        print("Argument ARRAY is not allowed, it will be filled automatically.")
+        exit()
     with open("run_job.sh", "w") as fp:
-        fp.write(run_job)
+        for key, value in keys.items():
+            fp.write(f"#SBATCH --{key}={value}\n")
+        fp.write("\n")
+        fp.write(run_job.strip()+"\n")
     print("File run_job.sh created.")
     exit()
 
@@ -182,12 +213,9 @@ def submit(array_list=None, array_command=None):
 
     try:
         with open("run_job.sh", "r") as fp:
-            file_content = fp.read()
+            file_content = fp.read().strip()
     except FileNotFoundError:
-        with open("run_job.sh", "w") as fp:
-            fp.write(run_job)
-        print(
-            "ERROR: You need to define job script run_job.sh.\nI just created a template run_job.sh.\nPlease edit it and change the line with #SBATCH --account=YOUR_ACCOUNT to your account name.")
+        print("ERROR: You need to define job script run_job.sh.\nCall \npysubmit init\n to create one.")
         return
 
     if "#SBATCH --account=YOUR_ACCOUNT" in file_content:
@@ -202,9 +230,9 @@ def submit(array_list=None, array_command=None):
                                         "pip install git+https://github.com/rgerum/slurm_job_submitter\n" + command)
 
     file_content = f"""#!/bin/bash
-    #SBATCH --array={array_command}
+#SBATCH --array={array_command}
 
-    """ + file_content
+""" + file_content + "\n"
 
     # print(file_content)
 
