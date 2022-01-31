@@ -280,10 +280,10 @@ def start():
     signal.signal(signal.SIGTERM, signal_handler)
 
     if args.slurm_id is not None:
-        os.environ["SJS_SLURM_JOB_ID"] = str(args.index)
         os.environ["SJS_SLURM_ID"] = str(args.slurm_id)
-        start_time = datetime.datetime.now()
-        set_job_status(dict(start_time=start_time, status_text="running"), args.slurm_id, args.index)
+    os.environ["SJS_SLURM_JOB_ID"] = str(args.index)
+    start_time = datetime.datetime.now()
+    set_job_status(dict(start_time=start_time, status_text="running"), args.slurm_id, args.index)
 
     try:
         # if the first argument is a python file or a python function
@@ -323,9 +323,8 @@ def start():
                                 status_text="error"), args.slurm_id, args.index)
         raise
 
-    if args.slurm_id is not None:
-        set_job_status(dict(end_time=datetime.datetime.now(), duration=datetime.datetime.now() - start_time, status=0,
-                            status_text="done"), args.slurm_id, args.index)
+    set_job_status(dict(end_time=datetime.datetime.now(), duration=datetime.datetime.now() - start_time, status=0,
+                        status_text="done"), args.slurm_id, args.index)
 
 
 def main():
