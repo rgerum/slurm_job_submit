@@ -120,7 +120,20 @@ def status():
     This command prints the current status of all jobs.
     """
     if Path(SLURM_LIST).exists():
+        # print the table
         os.system("cat slurm-list.csv | column -t -s,")
+
+        # read the job status list
+        data = read_csv(SLURM_LIST)
+        values_counts = {}
+        total_count = 0
+        for d in data:
+            if d["status_text"] not in values_counts:
+                values_counts[d["status_text"]] = 0
+            values_counts[d["status_text"]] += 1
+            total_count += 1
+        # print the summary
+        print(f"Summary: {total_count} jobs", *[f"{value} {key}" for key, value in values_counts.items()])
     else:
         print("No jobs submitted yet.")
     exit()
