@@ -282,6 +282,7 @@ def submit(array_list=None, array_command=None):
 
     try:
         submit = subprocess.check_output(["sbatch", "job.sh"])
+        print(submit)
     except subprocess.CalledProcessError:
         # omit the python error here as sbatch already should have printed an error message
         return
