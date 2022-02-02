@@ -127,8 +127,14 @@ def status():
         # get the job ids
         job_ids = list({d["job_id"].split("_")[0] for d in data})
 
-        output = subprocess.check_output(['squeue', '-o', '"%i, %t, %T"', '-j', ",".join(job_ids)])
-        output = read_csv(io.StringIO(output.decode().replace('"', '')))
+        output = subprocess.check_output(['squeue', '-o', '"%i, %t, %T"', '-j', ",".join(job_ids)], stderr=subprocess.STDOUT)
+        if output.startswith("slurm_load_jobs error:"):
+            if "Invalid job id specified" in output:
+                output = []
+            else:
+                raise subprocess.CalledProcessError(output)
+        else:
+            output = read_csv(io.StringIO(output.decode().replace('"', '')))
 
         slurm_states = {}
         for d in output:
