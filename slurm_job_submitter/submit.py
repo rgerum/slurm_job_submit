@@ -85,7 +85,7 @@ def cancel():
     # read the job status list
     data = read_csv(SLURM_LIST)
     # get the job ids
-    job_ids = {d["job_id"].split("_")[0] for d in data if d["status_text"] not in ["submitted", "running"]}
+    job_ids = {d["job_id"].split("_")[0] for d in data if d["status_text"] in ["pending", "running"]}
     # cancel them
     try:
         subprocess.check_output(["scancel", *job_ids])  # "--signal=TERM"
@@ -143,7 +143,9 @@ def status():
         for d in data:
             state = slurm_states.get(str(d["id"]), "CANCELLED")
             if d["status_text"] == "running" and state != "RUNNING":
-                d["status_text"] = "cancelled"
+                d["status_text"] = state.lower()
+            elif d["status_text"] == "pending" and state != "PENDING":
+                d["status_text"] = state.lower()
         write_csv(SLURM_LIST, data)
     if Path(SLURM_LIST).exists():
         # print the table
@@ -293,7 +295,7 @@ def submit(array_list=None, array_command=None):
         if i in array_list:
             set_job_status(
                 dict(id=i, job_id=f"{batch_id}_{i}", start_time=None, end_time=None, duration=None, status=-1,
-                     status_text="submitted", command=commands[i]), batch_id, i)
+                     status_text="pending", command=commands[i]), batch_id, i)
 
 
 def start():
