@@ -134,8 +134,8 @@ def status():
                 pass
             else:
                 raise subprocess.CalledProcessError(output.stderr.decode())
-        else:
-            output = read_csv(io.StringIO(output.stdout.decode().replace('"', '')))
+
+        output = read_csv(io.StringIO(output.stdout.decode().replace('"', '')))
 
         slurm_states = {}
         for d in output:
