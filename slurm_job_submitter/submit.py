@@ -129,10 +129,11 @@ def status():
 
         output = subprocess.run(['squeue', '-o', '"%i, %t, %T"', '-j', ",".join(job_ids)], stderr=subprocess.PIPE, stdout=subprocess.PIPE)
         if output.stderr:
-            if "Invalid job id specified" in output.stderr:
+            # if the job already ran completely the call might crash
+            if "Invalid job id specified" in output.stderr.decode():
                 pass
             else:
-                raise subprocess.CalledProcessError(output.stderr)
+                raise subprocess.CalledProcessError(output.stderr.decode())
         else:
             output = read_csv(io.StringIO(output.stdout.decode().replace('"', '')))
 
