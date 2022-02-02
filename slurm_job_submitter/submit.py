@@ -131,11 +131,12 @@ def status():
         if output.stderr:
             # if the job already ran completely the call might crash
             if "Invalid job id specified" in output.stderr.decode():
-                pass
+                output = []
             else:
                 raise subprocess.CalledProcessError(output.stderr.decode())
-
-        output = read_csv(io.StringIO(output.stdout.decode().replace('"', '')))
+        else:
+            output = output.stdout.decode()
+            output = read_csv(io.StringIO(output.replace('"', '')))
 
         slurm_states = {}
         for d in output:
