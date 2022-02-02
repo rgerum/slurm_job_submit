@@ -71,6 +71,9 @@ def set_job_status(status, slurm_id=None, index=None):
         id = os.environ["SJS_SLURM_JOB_ID"]
     else:
         id = str(index)
+    # not sure why this happens
+    if index is None:
+        return
 
     with Lock(SLURM_LOCK):
         data = read_csv(SLURM_LIST)
