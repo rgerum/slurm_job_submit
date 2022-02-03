@@ -128,12 +128,13 @@ def status():
         job_ids = list({d["job_id"].split("_")[0] for d in data})
 
         output = subprocess.run(['squeue', '-o', '"%i, %t, %T"', '-j', ",".join(job_ids)], stderr=subprocess.PIPE, stdout=subprocess.PIPE)
-        if output.stderr:
+        if output.stderr.decode():
             # if the job already ran completely the call might crash
             if "Invalid job id specified" in output.stderr.decode():
                 output = []
             else:
-                raise subprocess.CalledProcessError(output.stderr.decode())
+                # subprocess.CalledProcessError
+                raise ValueError(output.stderr.decode())
         else:
             output = output.stdout.decode()
             output = read_csv(io.StringIO(output.replace('"', '')))
