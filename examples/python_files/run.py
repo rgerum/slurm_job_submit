@@ -7,4 +7,4 @@ parser.add_argument('--strength', type=float)
 
 args = parser.parse_args()
 print("I am called with", args)
-set_job_status(dict(process="bla"))
+set_job_status(dict(process="foo"))

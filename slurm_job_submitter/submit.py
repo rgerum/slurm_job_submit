@@ -304,7 +304,7 @@ def submit(array_list=None, array_command=None):
         if i in array_list:
             set_job_status(
                 dict(id=i, job_id=f"{batch_id}_{i}", start_time=None, end_time=None, duration=None, status=-1,
-                     status_text="pending", command=commands[i]), batch_id, i)
+                     status_text="pending", command=commands[i]), i)
 
 
 def start():
@@ -322,21 +322,21 @@ def start():
 
     args = parser.parse_args()
     print(args)
+    os.environ["SJS_SLURM_JOB_ID"] = str(args.index)
+    if args.slurm_id is not None:
+        os.environ["SJS_SLURM_ID"] = str(args.slurm_id)
 
     # Definition of the signal handler. All it does is flip the 'interrupted' variable
     def signal_handler(signum, frame):
         if args.slurm_id is not None:
             set_job_status(dict(end_time=datetime.datetime.now(), duration=datetime.datetime.now() - start_time,
-                                status_text="cancel"), args.slurm_id, args.index)
+                                status_text="cancel"), args.index)
 
     # Register the signal handler
     signal.signal(signal.SIGTERM, signal_handler)
 
-    if args.slurm_id is not None:
-        os.environ["SJS_SLURM_ID"] = str(args.slurm_id)
-    os.environ["SJS_SLURM_JOB_ID"] = str(args.index)
     start_time = datetime.datetime.now()
-    set_job_status(dict(start_time=start_time, status_text="running"), args.slurm_id, args.index)
+    set_job_status(dict(start_time=start_time, status_text="running"), args.index)
 
     try:
         # if the first argument is a python file or a python function
@@ -373,11 +373,11 @@ def start():
     except subprocess.CalledProcessError as err:
         if args.slurm_id is not None:
             set_job_status(dict(end_time=datetime.datetime.now(), duration=datetime.datetime.now() - start_time,
-                                status_text="error"), args.slurm_id, args.index)
+                                status_text="error"), args.index)
         raise
 
     set_job_status(dict(end_time=datetime.datetime.now(), duration=datetime.datetime.now() - start_time, status=0,
-                        status_text="done"), args.slurm_id, args.index)
+                        status_text="done"), args.index)
 
 
 def main():

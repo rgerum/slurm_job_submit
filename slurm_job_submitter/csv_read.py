@@ -66,7 +66,7 @@ class Lock:
         self.fp.__exit__(exc_type, exc_val, exc_tb)
 
 
-def set_job_status(status, slurm_id=None, index=None):
+def set_job_status(status, index=None):
     if index is None:
         id = os.environ["SJS_SLURM_JOB_ID"]
     else:
