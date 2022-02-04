@@ -27,6 +27,9 @@ def read_csv(filename):
     else:
         data = list(csv.reader(filename))
 
+    if len(data) <= 1:
+        return []
+
     keys = data[0]
     rows = []
     for d in data[1:]:
