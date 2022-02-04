@@ -127,7 +127,7 @@ def status():
         # get the job ids
         job_ids = list({d["job_id"].split("_")[0] for d in data})
 
-        output = subprocess.run(['squeue', '-o', '"%i, %t, %T"', '-j', ",".join(job_ids)], stderr=subprocess.PIPE, stdout=subprocess.PIPE)
+        output = subprocess.run(['squeue', '-o', '"%i,%t,%T"', '-j', ",".join(job_ids)], stderr=subprocess.PIPE, stdout=subprocess.PIPE)
         if output.stderr.decode():
             # if the job already ran completely the call might crash
             if "Invalid job id specified" in output.stderr.decode():
