@@ -43,7 +43,7 @@ def write_csv(file, data):
     text = ""
     text += ",".join([str(key) for key in list(keys)]) + "\n"
     for d in data:
-        text += (",".join([str(d.get(key, "n/a")) if d.get(key, "n/a") is not None else "n/a" for key in keys])+"\n")
+        text += (",".join([str(d[key]) if d.get(key, None) is not None else "n/a" for key in keys])+"\n")
 
     with open(file, "w") as fp:
         fp.write(text)
@@ -71,9 +71,8 @@ def set_job_status(status, slurm_id=None, index=None):
         id = os.environ["SJS_SLURM_JOB_ID"]
     else:
         id = str(index)
-    # not sure why this happens
-    if index is None:
-        return
+    # convert the id to an integer
+    id = int(id)
 
     with Lock(SLURM_LOCK):
         data = read_csv(SLURM_LIST)
