@@ -1,6 +1,6 @@
 import csv
 from pathlib import Path
-
+import os
 
 SLURM_LIST = "slurm-list.csv"
 SLURM_LOCK = "slurm-lock"
