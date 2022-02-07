@@ -1,6 +1,7 @@
 import csv
 from pathlib import Path
 import os
+import fcntl
 
 SLURM_LIST = "slurm-list.csv"
 SLURM_LOCK = "slurm-lock"
@@ -57,16 +58,12 @@ class Lock:
         self.filename = filename
 
     def __enter__(self):
-        while True:
-            try:
-                self.fp = open(SLURM_LOCK, "w").__enter__()
-                return self.fp
-            except IOError as err:
-                print(err, "waiting for slurm-lock")
-                time.sleep(0.001)
+        self.fp = open(SLURM_LOCK, "w")
+        fcntl.lockf(self.fp, fcntl.LOCK_EX)
+        return self.fp
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        self.fp.__exit__(exc_type, exc_val, exc_tb)
+        self.fp.close()
 
 
 def set_job_status(status, index=None):
