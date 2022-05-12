@@ -199,6 +199,17 @@ def resubmit():
     submit(array_list, array_command)
 
 
+def repo_path():
+    return Path(__file__).parent
+
+def update():
+    if (repo_path() / "slurm_job_submitter").exits():
+        os.system("cd slurm_job_submitter")
+        os.system("git pull")
+        os.system("cd ..")
+    else:
+        os.system("git clone https://github.com/rgerum/slurm_job_submitter")
+
 def submit(array_list=None, array_command=None):
     """
     pysubmit submit SCRIPT DATAFILE
@@ -279,8 +290,11 @@ def submit(array_list=None, array_command=None):
         array_command = f"0-{length}"
         array_list = range(length)
 
+    if not (repo_path() / "slurm_job_submitter").exits():
+        update()
+
     file_content = file_content.replace("$COMMAND",
-                                        "pip install git+https://github.com/rgerum/slurm_job_submitter\n" + command)
+                                        f"pip install {repo_path()}/slurm_job_submitter\n" + command)
 
     file_content = f"""#!/bin/bash
 #SBATCH --array={array_command}
@@ -392,6 +406,8 @@ def main():
             return clear()
         elif sys.argv[1] == "status":
             return status()
+        elif sys.argv[1] == "update":
+            return update()
         elif sys.argv[1] == "submit":
             sys.argv.pop(1)
             return submit()
