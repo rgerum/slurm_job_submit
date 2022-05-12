@@ -203,7 +203,7 @@ def repo_path():
     return Path(__file__).parent
 
 def update():
-    if (repo_path() / "slurm_job_submitter").exits():
+    if (repo_path() / "slurm_job_submitter").exists():
         os.system("cd slurm_job_submitter")
         os.system("git pull")
         os.system("cd ..")
@@ -290,7 +290,7 @@ def submit(array_list=None, array_command=None):
         array_command = f"0-{length}"
         array_list = range(length)
 
-    if not (repo_path() / "slurm_job_submitter").exits():
+    if not (repo_path() / "slurm_job_submitter").exists():
         update()
 
     file_content = file_content.replace("$COMMAND",
