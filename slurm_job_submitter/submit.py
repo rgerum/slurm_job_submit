@@ -395,6 +395,7 @@ def start():
 
 
 def main():
+    print("main", sys.argv)
     if len(sys.argv) >= 1:
         if sys.argv[1] == "init":
             return init()
