@@ -416,4 +416,5 @@ def main():
         elif sys.argv[1] == "start":
             sys.argv.pop(1)
             return start()
-    return submit()
+    print("Error:", sys.argv)
+    #return submit()
