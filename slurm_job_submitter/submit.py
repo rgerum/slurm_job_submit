@@ -326,9 +326,9 @@ class Submitter:
         """
 
         # set the environment variables so that the script could react on this
-        os.environ["SJS_SLURM_JOB_ID"] = index
+        os.environ["SJS_SLURM_JOB_ID"] = str(index)
         if slurm_id is not None:
-            os.environ["SJS_SLURM_ID"] = slurm_id
+            os.environ["SJS_SLURM_ID"] = str(slurm_id)
 
         # Definition of the signal handler. All it does is flip the 'interrupted' variable
         def signal_handler(signum, frame):
