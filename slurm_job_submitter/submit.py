@@ -1,10 +1,13 @@
 import os
 import sys
+import io
 import subprocess
 import importlib
 from pathlib import Path
 import signal
 import datetime
+
+import fire
 
 from .default_jobscript import run_job
 from .csv_read import read_csv, write_csv, set_job_status, SLURM_LIST
@@ -18,7 +21,6 @@ class Submitter:
     @staticmethod
     def init(**kwargs):
         """
-        pysubmit init
         This command creates a run_job file
         """
         keys = {"time": "24:00:00",
@@ -54,7 +56,6 @@ class Submitter:
     @staticmethod
     def log(index: int):
         """
-        pysubmit log N
         This command prints the log from job number N
         """
         try:
@@ -72,7 +73,6 @@ class Submitter:
     @staticmethod
     def cancel():
         """
-        pysubmit cancel
         This command cancels all the current jobs.
         """
         # read the job status list
@@ -87,19 +87,29 @@ class Submitter:
             pass
 
     @staticmethod
-    def clear(y=False):
+    def clear(y: bool = None):
         """
-        pysubmit clear
         This command clears all the output from slurm job submitter and slurm
         """
+        # find all the slurm output files
         files = [r for r in Path(".").glob("slurm*")]
+
+        # if no files are present
         if len(files) == 0:
             print("No files to clear")
             exit()
+
+        # list all the files
         print("Remove the files")
         for file in files:
             print("  ", file)
-        print(f"Do you want to delete all the listed files? (y/n)")
+
+        # if y is not provided ask to delete
+        if y is None:
+            print(f"Do you want to delete all the listed files? (y/n)")
+            y = input()
+
+        # if yes remove them
         if y:
             os.system("rm slurm*")
             print(f"Removed {len(files)} files")
@@ -107,11 +117,9 @@ class Submitter:
     @staticmethod
     def status(update=False):
         """
-        pysubmit status
         This command prints the current status of all jobs.
         """
         if update:
-            import io
             # read the job status list
             data = read_csv(SLURM_LIST)
 
@@ -377,5 +385,4 @@ class Submitter:
 
 
 def main():
-    import fire
     fire.Fire(Submitter)
