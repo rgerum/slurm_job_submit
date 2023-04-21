@@ -293,8 +293,11 @@ def submit(array_list=None, array_command=None):
     if not (repo_path() / "slurm_job_submitter").exists():
         update()
 
-    file_content = file_content.replace("$COMMAND",
-                                        f"pip install {repo_path()}/slurm_job_submitter\n" + command)
+    if "virtualenv" in file_content:
+        file_content = file_content.replace("$COMMAND",
+                                            f"pip install {repo_path()}/slurm_job_submitter\n" + command)
+    else:
+        file_content = file_content.replace("$COMMAND", command)
 
     file_content = f"""#!/bin/bash
 #SBATCH --array={array_command}
