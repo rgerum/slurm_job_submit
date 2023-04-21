@@ -47,7 +47,7 @@ def write_csv(file, data):
     text = ""
     text += ",".join([str(key) for key in list(keys)]) + "\n"
     for d in data:
-        if d["id"] is not None:
+        if d is not None and d.get("id", None) is not None:
             text += (",".join([str(d[key]) if d.get(key, None) is not None else "n/a" for key in keys])+"\n")
 
     with open(file, "w") as fp:
