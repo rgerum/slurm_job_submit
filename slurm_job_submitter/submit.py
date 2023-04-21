@@ -299,11 +299,11 @@ class Submitter:
         # add the array command to the file content
         file_content = f"#!/bin/bash\n#SBATCH --array={array_command}\n" + file_content + "\n"
 
-        with open("job.sh", "w") as fp:
+        with open(".tmp_job.sh", "w") as fp:
             fp.write(file_content)
 
         try:
-            submit = subprocess.check_output(["sbatch", "job.sh"])
+            submit = subprocess.check_output(["sbatch", ".tmp_job.sh"])
             print(submit.decode())
         except subprocess.CalledProcessError:
             # omit the python error here as sbatch already should have printed an error message
