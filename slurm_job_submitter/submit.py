@@ -238,7 +238,7 @@ class Submitter:
                         cmd.append(f"--{key}")
                         cmd.append(f"{value}")
                     commands.append(" ".join(cmd))
-            command = f"pysubmit_start \"{script_file}\" \"{csv_file}\" $SLURM_ARRAY_TASK_ID --slurm_id $SLURM_ARRAY_JOB_ID"
+            command = f"pysubmit start \"{script_file}\" \"{csv_file}\" $SLURM_ARRAY_TASK_ID --slurm_id $SLURM_ARRAY_JOB_ID"
             print(f"Found {length} jobs in {csv_file}")
         elif script_file is not None:
             data_file = script_file
@@ -258,7 +258,7 @@ class Submitter:
                 exit()
             with open(data_file) as fp:
                 commands = fp.readlines()
-            command = f"pysubmit_start \"{data_file}\" $SLURM_ARRAY_TASK_ID --slurm_id $SLURM_ARRAY_JOB_ID"
+            command = f"pysubmit start \"{data_file}\" $SLURM_ARRAY_TASK_ID --slurm_id $SLURM_ARRAY_JOB_ID"
             print(f"Found {length} jobs in {data_file}")
         else:
             print("To submit a list of commands call")

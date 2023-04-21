@@ -8,7 +8,7 @@ setup(name='slurm_job_submitter',
       author_email='richard.gerum@fau.de',
       license='MIT',
       entry_points={
-          'console_scripts': ['pysubmit=slurm_job_submitter.submit:main', 'pysubmit_start=slurm_job_submitter.submit:start'],
+          'console_scripts': ['pysubmit=slurm_job_submitter.submit:main'],
       },
       install_requires=["fire"],
 )
