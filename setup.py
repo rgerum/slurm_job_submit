@@ -10,5 +10,5 @@ setup(name='slurm_job_submitter',
       entry_points={
           'console_scripts': ['pysubmit=slurm_job_submitter.submit:main', 'pysubmit_start=slurm_job_submitter.submit:start'],
       },
-      install_requires=[],
+      install_requires=["fire"],
 )
