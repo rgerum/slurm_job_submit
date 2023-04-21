@@ -279,8 +279,8 @@ class Submitter:
             array_command = f"0-{length}"
             array_list = range(length)
 
-        if not (repo_path() / "slurm_job_submitter").exists():
-            Submitter.update()
+        #if not (repo_path() / "slurm_job_submitter").exists():
+        #    Submitter.update()
 
         if "virtualenv" in file_content:
             file_content = file_content.replace("$COMMAND",
@@ -288,11 +288,8 @@ class Submitter:
         else:
             file_content = file_content.replace("$COMMAND", command)
 
-        file_content = f"""#!/bin/bash
-    #SBATCH --array={array_command}
-    """ + file_content + "\n"
-
-        # print(file_content)
+        # add the array command to the file content
+        file_content = f"#!/bin/bash\n#SBATCH --array={array_command}\n" + file_content + "\n"
 
         with open("job.sh", "w") as fp:
             fp.write(file_content)
