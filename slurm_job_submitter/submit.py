@@ -174,7 +174,7 @@ class Submitter:
             print("No jobs submitted yet.")
 
     @staticmethod
-    def resubmit():
+    def resubmit(script_file=None, csv_file=None):
         """
         pysubmit resubmit SCRIPT DATAFILE
         pysubmit resubmit DATAFILE
@@ -194,7 +194,7 @@ class Submitter:
         array_command = ",".join([str(s) for s in array_list])
         print(f"resubmitting {len(array_list)} jobs:", array_command)
 
-        Submitter.submit(array_list=array_list, array_command=array_command)
+        Submitter.submit(script_file, csv_file, array_list=array_list, array_command=array_command)
 
     @staticmethod
     def update():
